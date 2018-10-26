@@ -1,5 +1,5 @@
-Electron Diffraction - Signal Class
-===================================
+Basics
+======
 
 pyXem provides a library of tools primarily developed for the analysis of
 4D-S(P)ED data, although many methods are applicable to electron diffraction
@@ -27,22 +27,21 @@ this goal are summarized in the following schematic.
    :align: center
    :width: 600
 
+|
+
 To illustrate the data methods implemented in pyXem we will consider data from a
 model system of GaAs nanowires comprising a series of twinned regions along its
 length, as shown below. (We acknowledge Prof. Ton van Helvoort, NTNU, Norway, for
 providing these samples).
 
+|
+
 .. figure:: images/model_system.png
    :align: center
    :width: 600
 
-The methods described in this documentation are demonstrated in a series of
-[Jupyter Notebooks](http://jupyter.org/), which can be used as analysis
-templates on which to build. These are available `here <https://github.com/pyxem/pyxem-demos>`__.
-
 Experimental parameters associated with the data acquisition can be stored in
-metadata for future reference using the utility function
-:py:meth:`~.ElectronDiffraction.set_experimental_parameters`, for example:
+metadata using one of the methods of the ElectronDiffraction class, as shown below
 
 .. code-block:: python
 
@@ -79,10 +78,9 @@ diffraction patterns. This can be achieve with
 
 .. code-block:: python
 
-    >>> dp.center_direct_beam()
+    >>> dp.center_direct_beam(radius_start=3, radius_finish=5)
 
-This method has an argument (sigma) that should be smaller (in pixel terms) than the distance from the edge of
-the nearest diffraction spot to the direct beam. Furthermore, the code assumes the direct beam is brightest spot.
+This method has two mandatory arguments, you can find out more about these by inspecting the relevant docstrings.
 
 Intensity corrections most simply involve gain normalization based on
 dark-reference and bright-reference images. Such gain normalization may be
@@ -93,7 +91,7 @@ performed in pyXem using :py:meth:`~.ElectronDiffraction.apply_gain_normalisatio
     >>> dp.apply_gain_normalisation(bref=bright_reference, dref=dark_reference)
 
 Following alignment and the application of necessary corrections to the data (ESSENTIAL DO NOT SKIP!), one
-may be calibrate the signals. Utility functions exist to apply calibrations to the diffraction and scan axes respectively.
+may be calibrate the signals. Methods exist to apply calibrations to the diffraction and scan axes respectively.
 
 .. code-block:: python
 
@@ -108,20 +106,14 @@ Radial Integration
 ------------------
 
 The :py:meth:`~.ElectronDiffraction.get_radial_profile` method integrates every
-two-dimensional electron diffraction pattern about its and is applied as:
+two-dimensional electron diffraction pattern about its geometric center and is applied as:
 
 .. code-block:: python
 
     >>> dp.get_radial_profile()
 
 The result is a one-dimensional plot of diffracted intensity as a function of
-scattering angle.
-
-.. figure:: images/radial_profile.png
-   :align: center
-   :width: 400
-
-Again, this will not work if you fail to center all of the patterns in your S(P)ED scan.
+scattering angle. This will not work if you fail to center all of the patterns in your S(P)ED scan.
 
 Background Removal
 ------------------
@@ -131,10 +123,6 @@ intensities and achieving reliable pattern matching or peak finding. The aims in
 these two cases are significantly different. Background subtraction may be
 achieved in pyXem via the :py:meth:`~.ElectronDiffraction.remove_background`
 method, which has multiple options.
-
-
-Background Modelling
-^^^^^^^^^^^^^^^^^^^^
 
 The background may be modelled by fitting a model to the radial profile of the
 diffraction data. The model may then be made ciruclarly symmetric and subtracted.
@@ -153,10 +141,6 @@ Backgound modelling, as described above yields the following:
 .. figure:: images/background_model.png
    :align: center
    :width: 600
-
-
-Morphological Background Removal
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Background removal based on morphological operations provides a fast and
 versatile method for removing non-smooth background. A so-called h-dome method
@@ -184,53 +168,8 @@ Peak Finding
 
 The :py:meth:`~.ElectronDiffraction.find_peaks` method provides access to a
 number of algorithms for that achieve peak finding in electron diffraction
-patterns. The found peak positions are returned as
-The methods available are as follows:
-
-Zaeferrer peak finder
-^^^^^^^^^^^^^^^^^^^^^
-
-.. code-block:: python
-
-    >>> dp.find_peaks(method='zaefferer')
-
-This algorithm was developed by Zaefferer and the implementation here is after
-the description of the algorithm in the Ph.D. thesis of Thomas A. White. It is
-based on a gradient threshold followed by a local maximum search within a square
-window, which is moved until it is centered on the brightest point, which is
-taken as a peak if it is within a certain distance of the starting point.
-
-Ball statistical peak finder
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-.. code-block:: python
-
-    >>> dp.find_peaks(method='stat')
-
-Developed by Gordon Ball, and described in the Ph.D. thesis of Thomas A.
-White, this method is based on finding points which have a statistically
-higher value than the surrounding areas, then iterating between smoothing and
-binarising until the number of peaks has converged. This method is slow, but
-very robust to a variety of image types.
-
-Matrix based peak finding
-^^^^^^^^^^^^^^^^^^^^^^^^^
-
-.. code-block:: python
-
-    >>> dp.find_peaks(method='laplacian_of_gaussians')
-    >>> dp.find_peaks(method='difference_of_gaussians')
-
-These methods are essentially wrappers around the
-`scikit-image <http://scikit-image
-.org/docs/dev/auto_examples/plot_blob.html>`_ Laplacian
-of Gaussian and Difference of Gaussian methods, based on stacking the
-Laplacian/difference of images convolved with Gaussian kernels of various
-standard deviations. Both are very rapid and relatively robust, given
-appropriate parameters.
-
-Interactive Parametrization
-^^^^^^^^^^^^^^^^^^^^^^^^^^^
+patterns. There are currently five methods avaliable, a good place to start
+though is to run the interactive peakfinder in a Jupyter Notebook
 
 .. code-block:: python
 
@@ -254,28 +193,60 @@ Several widgets are available:
 * The parameter adjusters will update the parameters of the method and re-plot
   the new peaks.
 
-.. note:: Some methods take significantly longer than others, particularly
-    where there are a large number of peaks to be found. The plotting window
+.. note:: Some methods take significantly longer than others (the statistical method is particularly slow). The plotting window
     may be inactive during this time.
 
+Running in a script is then simple.
 
-Unsupervised Machine Learning
------------------------------
-
-Unsupervised machine learning algorithms may be applied to SED as a route to
-obtain representative "component diffraction patterns" and their respective
-"loadings" in real space. These methods involve unfolding each diffraction
-pattern into an image vector and stacking these vectors together to construct a
-data matrix, which is then factorized:
-
-.. figure::  images/ml_sed_scheme.png
-   :align: center
-   :width: 600
-
-Various matrix decomposition methods are available through the decomposition()
-method, which is inherited directy from HyperSpy and is documented
-`here <http://hyperspy.org/hyperspy-doc/current/user_guide/mva.html>`__.
+Zaefferer
+`````````
 
 .. code-block:: python
 
-    >>> dp.decomposition()
+    >>> dp.find_peaks(method='zaefferer')
+
+This algorithm was developed by Zaefferer and the implementation here is after
+the description of the algorithm in the Ph.D. thesis of Thomas A. White. It is
+based on a gradient threshold followed by a local maximum search within a square
+window, which is moved until it is centered on the brightest point, which is
+taken as a peak if it is within a certain distance of the starting point.
+
+Stat
+````
+.. code-block:: python
+
+    >>> dp.find_peaks(method='stat')
+
+Developed by Gordon Ball, and described in the Ph.D. thesis of Thomas A.
+White, this method is based on finding points which have a statistically
+higher value than the surrounding areas, then iterating between smoothing and
+binarising until the number of peaks has converged. This method is slow, but
+very robust to a variety of image types.
+
+Matrix Methods
+``````````````
+
+.. code-block:: python
+
+    >>> dp.find_peaks(method='laplacian_of_gaussians')
+    >>> dp.find_peaks(method='difference_of_gaussians')
+
+These methods are essentially wrappers around the
+`scikit-image <http://scikit-image
+.org/docs/dev/auto_examples/plot_blob.html>`_ Laplacian
+of Gaussian and Difference of Gaussian methods, based on stacking the
+Laplacian/difference of images convolved with Gaussian kernels of various
+standard deviations. Both are very rapid and relatively robust, given
+appropriate parameters.
+
+Cross Correlation
+`````````````````
+
+.. code-block:: python
+
+    >>> disc = np.ones((2,2))
+    >>> dp.find_peaks(method='xc',disc_image=disc)
+
+The final method is based on cross correlation, forming a thin wrapper over
+the template matching code avaliable in scikit-image `<http://scikit-image
+.org/docs/dev/auto_examples/features_detection/plot_template.html>`_
